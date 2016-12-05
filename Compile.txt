@@ -1,0 +1,8 @@
+compile:
+javac -classpath ".;C:\Program Files (x86)\Java\Java Packages\json-20160810.jar;C:\Program Files (x86)\Java\Java Packages\mysql-connector-java-5.1.40-bin.jar" *.java
+
+#ignore this (for testing)
+ javac -classpath ".;C:\Program Files (x86)\Java\Java Packages\mysql-connector-java-5.1.40-bin.jar" DatabaseTest.java
+
+run:
+java -classpath ".;C:\Program Files (x86)\Java\Java Packages\json-20160810.jar;C:\Program Files (x86)\Java\Java Packages\mysql-connector-java-5.1.40-bin.jar" Server 50001

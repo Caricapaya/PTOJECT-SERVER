@@ -1,0 +1,29 @@
+table account:
+account id
+username
+password
+email
+salt
+
+name
+surname
+middle
+age
+gender
+status (student/teacher)..
+picture?
+
+table passwords:
+account id
+password (hashed)
+
+table requests:
+id sender
+id receiver
+date
+
+table friends: (make redundant)
+id friend1
+id friend2
+
+
