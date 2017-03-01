@@ -14,6 +14,8 @@ class Device{
 	private String gender;
 	private Date birthDate;
 
+	private boolean nameStored;
+
 	public Device(int mID, double lat, double lng){
 		deviceID = mID;
 		latitude = lat;
@@ -26,6 +28,8 @@ class Device{
 		occupation = null;
 		gender = null;
 		birthDate = null;
+
+		nameStored = false;
 	}
 
 	private Device(Device caller){
@@ -40,6 +44,8 @@ class Device{
 		occupation = caller.occupation;
 		gender = caller.gender;
 		birthDate = caller.birthDate;
+
+		nameStored = caller.nameStored;
 	}
 
 	public int secondsSinceCreated(){
@@ -104,5 +110,13 @@ class Device{
 		else{
 			return firstName + " " + lastName;
 		}
+	}
+
+	public boolean isNameCached(){
+		return nameStored;
+	}
+
+	public void setNameCached(boolean nc){
+		nameStored = nc;
 	}
 }

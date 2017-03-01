@@ -14,7 +14,7 @@ class ConnectedDevicesManager{
 	int connectionTimeout;
 
 	public ConnectedDevicesManager(){
-		this(10);
+		this(15);
 	}
 
 	public ConnectedDevicesManager(int mtime){
@@ -85,4 +85,22 @@ class ConnectedDevicesManager{
 		devicesLock.readLock().unlock();
 		return retval;
 	}
+
+	public void disconnectDevice(int id){
+		devicesLock.writeLock().lock();
+		connectedDevices.remove(id);
+		devicesLock.writeLock().unlock();
+	}
+
+	public ArrayList<Integer> getAllConnectedDeviceIDs(){
+		ArrayList<Integer> retval = new ArrayList<Integer>();
+		devicesLock.readLock().lock();
+		for (Device dev : connectedDevices.values()) {
+			retval.add(dev.getDeviceID());
+		}
+		devicesLock.readLock().unlock();
+		return retval;
+	}
+
+
 }
