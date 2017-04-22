@@ -1,6 +1,5 @@
 import java.util.*;
 
-//This class stores info about a connected user
 class Device{
 	private double latitude;
 	private double longitude;
@@ -15,27 +14,7 @@ class Device{
 	private String gender;
 	private Date birthDate;
 
-	private String currentArea;
-
-	private boolean nameStored; //
-	private boolean visible;
-
-	public Device(int mID){
-		deviceID = mID;
-		latitude = -1;
-		longitude = -1;
-		timeStamp = System.currentTimeMillis();
-
-		firstName = null;
-		middleName = null;
-		lastName = null;
-		occupation = null;
-		gender = null;
-		birthDate = null;
-
-		nameStored = false; //is name chached from database
-		visible = false;
-	}
+	private boolean nameStored;
 
 	public Device(int mID, double lat, double lng){
 		deviceID = mID;
@@ -50,8 +29,7 @@ class Device{
 		gender = null;
 		birthDate = null;
 
-		nameStored = false; //is name chached from database
-		visible = true;
+		nameStored = false;
 	}
 
 	private Device(Device caller){
@@ -68,12 +46,8 @@ class Device{
 		birthDate = caller.birthDate;
 
 		nameStored = caller.nameStored;
-
-		currentArea = caller.currentArea;
-		visible = caller.visible;
 	}
 
-	//get age of this object on the server (in seconds)
 	public int secondsSinceCreated(){
 		return (int) (System.currentTimeMillis() - timeStamp)/1000;
 	}
@@ -126,7 +100,6 @@ class Device{
 		occupation = oc;
 	}
 
-	//get first/last name combined
 	public String getName(){
 		if (firstName == null) {
 			return "N/A";
@@ -145,21 +118,5 @@ class Device{
 
 	public void setNameCached(boolean nc){
 		nameStored = nc;
-	}
-
-	public void setArea(String area){
-		currentArea = area;
-	}
-
-	public String getArea(){
-		return currentArea;
-	}
-
-	public boolean isVisible(){
-		return visible;
-	}
-
-	public void setVisible(boolean vis){
-		visible	= vis;
 	}
 }
