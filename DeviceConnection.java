@@ -174,7 +174,6 @@ public class DeviceConnection extends Thread{
 			e.printStackTrace();
 		}
 		catch(Exception e){
-			System.out.println("HELLO ");
 			e.printStackTrace();
 		}
 		finally{
@@ -340,7 +339,6 @@ public class DeviceConnection extends Thread{
 				row.put("name", name);
 				row.put("deviceID", result.getInt("AccountID"));
 				rows.put(row);
-				System.out.println("FOUND PERSON: " + name);
 			}
 			/*if (rows.size() < 1) {
 				conn.close();
@@ -700,7 +698,6 @@ public class DeviceConnection extends Thread{
 				response.put("people", array);
 			break;
 		}
-		System.out.println(response);
 		response.put("type", "GET_LOCATIONS");
 		return response;
 	}
@@ -983,7 +980,6 @@ public class DeviceConnection extends Thread{
 				row.put("name", name); //put full name
 				row.put("deviceID", result.getInt("user_accounts.AccountID"));
 				rows.put(row);
-				System.out.println("ROW: " + row);
 			}
 			/*if (rows.size() < 1) {
 				conn.close();
@@ -1210,12 +1206,17 @@ public class DeviceConnection extends Thread{
 					JSONObject location = new JSONObject();
 					Device	dev = connectedDevicesManager.getDevice(result.getInt("user_accounts.AccountID"));
 
-					//TODO decide if visible
-
-					//put friend location 
-					row.put("visible", true);
-					location.put("latitude",  dev.getLatitude());
-					location.put("longitude", dev.getLongitude());
+					//set coordinates if visible to other users
+					if (dev.isVisible()) {
+						row.put("visible", true);
+						location.put("latitude",  dev.getLatitude());
+						location.put("longitude", dev.getLongitude());
+					}
+					else{
+						row.put("visible", false);
+					}
+					location.put("name", designatedAreaManager.currentArea(dev));
+					
 					row.put("location", location);
 				}
 				else{
