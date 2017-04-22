@@ -1,0 +1,634 @@
+<html>
+<head>
+<title>Area Designator</title>
+<style>
+	body{
+		background-color: #BDC3C7;
+		margin: 0 auto;
+		width: 80%;
+	}
+
+	#container{
+		margin-top: 20px;
+		height: 80%;
+	}
+
+	#titlearea{
+		height: 150px;
+		width: 100%;
+		font-family: "Times New Roman";
+		text-align: center;
+	}
+
+	#titlearea h1{
+		vertical-align: middle;
+		padding-top: 50px;
+		margin: auto;
+	}
+
+	#sidebar{
+		float: left;
+		width: 250px;
+		height: 100%;
+	}
+
+	#map{
+		overflow: hidden;
+		height: 100%;
+	}
+
+	.frameItem{
+		background-color: #D5DBDB;
+	}
+
+	.menuItem{
+		border-top: 1px solid #000000;
+		padding-top: 5px;
+		padding-bottom: 5px;
+	}
+
+	#overview{
+		position: relative;
+		content: right;
+		text-align: right;
+		padding-right: 5px;
+	}
+
+	#overview table, #current table{
+		padding-top: 5px;
+		margin-right: 0px;
+		margin-left: auto;
+	}
+
+	#overview td{
+		margin-top: 5px;
+		width: 30px;
+	}
+
+	#currentAreaName, #currentAreaRectangles, #currentAreaCircles{
+		margin-top: 5px;
+		width: 120px;
+	}
+
+	#createNewArea, #current, #file, #shapes, #loadArea{
+		text-align: right;
+		padding-right: 5px;
+	}
+
+	#createNewLabel, #createNewLabelRadio, #fileLabel, #currentLabel, #shapesLabel, #overViewLabel, #loadAreaLabel{
+		display: block;
+		padding-top: 10px;
+	}
+	form{
+		margin-bottom: 0px;
+	}
+</style>
+</head>
+<body>
+	<div id="container">
+		<div id="titlearea" class="frameItem"><h1>Area Designator</h1></div>
+		<div id="sidebar" class="frameItem">
+			<div id="overview" class="menuItem">
+			<table>
+				<label id="overviewLabel"><b>Current File</b></label>
+				<tr><td><b>Campus: </b></td><td id="overViewCampus">No</td></tr>
+				<tr><td><b>Buildings: </b></td><td id="overViewBuildings">0</td></tr>
+				<tr><td><b>Areas: </b></td><td id="overViewAreas">0</td></tr>
+			</table>
+			</div>
+			<div id="createNewArea" class="menuItem">
+			<form id="createNewAreaForm" onsubmit="event.preventDefault(); addArea();">
+				<label id="createNewLabel"><b>Create New Area</b></label>
+				<label id="createNewLabel">Name: <input type="text" id="nametext"></label>
+				<label id="createNewLabelRadio">Campus <input type="radio" name="areatype" value="campus">
+				| Building <input type="radio" name="areatype" value="building">
+				| Area <input type="radio" name="areatype" value="area"></label>
+				<label id="createNewLabel"><input type="submit" value="Start New Area" onclick="_value = this.value"></label>
+			</form>
+			</div>
+			<div id="loadArea" class="menuItem">
+				<form id="loadAreaForm" onsubmit="event.preventDefault(); storedAreaHandler();">
+					<label id="loadAreaLabel"><b>Load Existing Area</b></label>
+					<label id="loadAreaLabel"><select id="loadAreaSelect"><option>-- Select Area --</option></select></label>
+					<label id="loadAreaLabel"><input type="submit" value="Delete Area" onclick="_value = this.value"><input type="submit" value="Load Area" onclick="_value = this.value"></label>
+				</form>
+			</div>
+			<div id="shapes" class="menuItem">
+				<form id="shapesForm" onsubmit="event.preventDefault(); addShape();">
+					<label id="shapesLabel"><b>Edit Shapes</b></label>
+					<label id="shapesLabel"><input type="submit" value="Add Circle" onclick="_value = this.value"><input type="submit" value="Add Rectangle" onclick="_value = this.value"></label><label id="shapesLabel"><input type="submit" value="Delete Selected" onclick="_value = this.value"></label>
+				</form>
+			</div>
+			<div id="current" class="menuItem">
+				<form id="currentAreaForm" onsubmit="event.preventDefault(); currentAreaHandler();">
+					<label id="currentLabel"><b>Current Area</b></label>
+					<table>
+						<tr><td><b>Name: </b></td><td id="currentAreaName">N/A</td></tr>
+						<tr><td><b>Type: </b></td><td id="currentAreaType">N/A</td></tr>
+						<tr><td><b>Rectangles: </b></td><td id="currentAreaRectangles">0</td></tr>
+						<tr><td><b>Circles: </b></td><td id="currentAreaCircles">0</td></tr>
+					</table>
+					<label id="currentLabel"><input type="submit" value="Discard" onclick="_value = this.value"><input type="submit" value="Add To File" onclick="_value = this.value"></label>
+				</form>
+			</div>
+			<div id="file" class="menuItem">
+				<form id="fileForm" onsubmit="event.preventDefault(); fileHandler();">
+					<label id="fileLabel"><b>Current File</b></label>
+					<label id="fileLabel"><input type="submit" value="Reset" onclick="_value = this.value"><input type="submit" value="Save XML" onclick="_value = this.value"></label>
+				</form>
+			</div>
+		</div>
+		<div id="map"></div>
+	</div>
+	<script>
+	const RECTANGLE = 0;
+	const CIRCLE = 1;
+	const CAMPUS = 2;
+	const BUILDING = 3;
+	const AREA = 4;
+
+	var map;
+	var areas = [];
+	var currentArea = null;
+	var currentShape = null;
+
+	var campusDesignated = false;
+	var campusIndex = -1;
+	var areaCount = 0;
+	var buildingCount = 0;
+
+	//form submit button value
+	var _value;
+	 
+
+	class Area{
+		constructor(nm, tp){
+			this.name = nm;
+			this.type = tp;
+			this.shapes = [];
+			this.circles = 0;
+			this.rectangles = 0;
+			this.index = -1;
+			this.spinnerIndex = -1;
+		}
+
+		addShape(tp){
+			if (tp == RECTANGLE) {
+				var center = map.getCenter();
+				var rectangle = new google.maps.Rectangle({
+					map: map,
+					draggable: true,
+					editable: true,
+					bounds:{
+						north: center.lat() + 0.0003,
+						south: center.lat() - 0.0003,
+						west: center.lng() - 0.0003,
+						east: center.lng() + 0.0003
+					}
+				});
+				google.maps.event.addListener(rectangle, "mousedown", function (e){
+					currentShape = rectangle;
+				});
+				this.shapes.push(rectangle);
+				currentShape = rectangle;
+			}
+			if (tp == CIRCLE) {
+				var center = map.getCenter();
+				var circle = new google.maps.Circle({
+					map: map,
+					draggable: true,
+					editable: true,
+					center: center,
+					radius: 30
+				});
+				google.maps.event.addListener(circle, "mousedown", function (e){
+					currentShape = circle;
+				});
+				this.shapes.push(circle);
+				currentShape = circle;
+			}
+		}
+
+		displayShapes(){
+			for (var i = this.shapes.length - 1; i >= 0; i--) {
+				this.shapes[i].setMap(map);
+			}
+		}
+
+		hideShapes(){
+			for (var i = this.shapes.length - 1; i >= 0; i--) {
+				this.shapes[i].setMap(null);
+			};
+		}
+
+		clone(){
+			var retval = new Area(this.name, this.type);
+			retval.index = this.index;
+			retval.spinnerIndex = this.spinnerIndex;
+			retval.rectangles = this.rectangles;
+			retval.circles = this.circles;
+			retval.shapes = [];
+
+			for (var i = this.shapes.length - 1; i >= 0; i--) {
+				if (this.shapes[i] instanceof google.maps.Rectangle){
+					var rect = new google.maps.Rectangle({
+						draggable: true,
+						editable: true,
+						bounds: this.shapes[i].getBounds()
+					});
+					retval.shapes.push(rect);
+				}
+				if (this.shapes[i] instanceof google.maps.Circle){
+					var circ = new google.maps.Circle({
+						draggable: true,
+						editable: true,
+						radius: this.shapes[i].getRadius(),
+						center: this.shapes[i].getCenter()
+					});
+					retval.shapes.push(circ);
+				}
+			};
+
+			return retval;
+		}
+	}
+	function addArea(){
+		var areaName = document.getElementById("nametext").value;
+		var areaType;
+		var selection = document.querySelector("input[name='areatype']:checked");
+		if(areaName == ""){
+			document.getElementById("nametext").style.borderColor = "red";
+			return false;
+		}
+		else{
+			document.getElementById("nametext").style.borderColor = "initial";
+		}
+
+		if (selection == null){
+			document.getElementById("createNewLabelRadio").style.border = "red 1px solid";
+			return false;
+		}
+		else{
+			document.getElementById("createNewLabelRadio").style.border = "initial";
+			areaType = toEnum(selection.value);
+		}
+
+		if (currentArea != null) {
+			if (confirm("Save current area?")) {
+				saveArea();
+			}
+			else{
+				discardArea();
+			}
+		}
+		
+
+		currentArea = new Area(areaName, areaType);
+		document.getElementById("currentAreaName").innerHTML = areaName;
+		document.getElementById("currentAreaType").innerHTML = selection.value;
+		document.getElementById("currentAreaRectangles").innerHTML = 0;
+		document.getElementById("currentAreaCircles").innerHTML = 0;
+		return false;
+	}
+
+	function addShape(){
+		if (currentArea == null) {
+			return;
+		}
+		if (_value === "Add Rectangle") {
+			document.getElementById("currentAreaRectangles").innerHTML = ++currentArea.rectangles;
+			currentArea.addShape(RECTANGLE);
+		}
+		else if (_value === "Add Circle") {
+			document.getElementById("currentAreaCircles").innerHTML = ++currentArea.circles;
+			currentArea.addShape(CIRCLE);
+		}
+		else if (_value === "Delete Selected") {
+			deleteShape();
+		}
+	}
+
+	function deleteShape(){
+		if (currentShape == null) {
+			return;
+		}
+		if (currentShape instanceof google.maps.Rectangle){
+			document.getElementById("currentAreaRectangles").innerHTML = --currentArea.rectangles;
+		}
+		else if (currentShape instanceof google.maps.Circle){
+			document.getElementById("currentAreaRectangles").innerHTML = --currentArea.circles;
+		}
+		currentShape.setMap(null);
+		for (var i = 0; i < currentArea.shapes.length; i++) {
+			if(currentArea.shapes[i] === currentShape){
+				currentArea.shapes.splice(i, i);
+			}
+		}
+
+		var numShapes = currentArea.shapes.length;
+		if (numShapes > 0) {
+			currentShape = currentArea.shapes[numShapes-1];
+		}
+		else{
+			currentShape = null;
+		}
+	}
+
+	function currentAreaHandler(){
+		if (_value == "Discard") {
+			discardArea();
+		}
+		if (_value == "Add To File") {
+			saveArea();
+		};
+	}
+
+	function saveArea(){
+		if (currentArea == null) {
+			return;
+		}
+		if (currentArea.index != -1) {
+			areas[currentArea.index] = currentArea;
+			return;
+		}
+		var areaSelection = document.getElementById("loadAreaSelect");
+		currentArea.index = areas.length;
+		currentArea.spinnerIndex = areaSelection.length;
+		var optionText = "";
+		switch (currentArea.type){
+			case CAMPUS:
+				optionText += "C: ";
+				if (campusDesignated) {
+					if (confirm("Overwrite existing campus area?")) {
+						deleteStoredArea(campusIndex);
+						campusIndex = -1;
+					}
+					else{
+						return;
+					}
+				}
+				else{
+					campusDesignated = true;
+					campusIndex = currentArea.index;
+				}
+				document.getElementById("overViewCampus").innerHTML = currentArea.name;
+				break;
+			case BUILDING:
+				optionText += "B: ";
+				buildingCount++;
+				document.getElementById("overViewBuildings").innerHTML = buildingCount;
+				break;
+			case AREA:
+				optionText += "A: ";
+				areaCount++;
+				document.getElementById("overViewAreas").innerHTML = areaCount;
+				break;
+		}
+		optionText += currentArea.name;
+
+
+		//add area to stored areas and add option to dropdown
+		areas.push(currentArea);
+		var newOption = document.createElement("option");
+		newOption.text = optionText;
+		newOption.value = currentArea.index;
+		areaSelection.appendChild(newOption);
+
+		//TODO: update area types
+
+		//cleanup
+		discardArea();
+	}
+
+	function discardArea(){
+		if (currentArea == null) {
+			return;
+		}
+		currentArea.hideShapes();
+		currentArea = null;
+		currentShape = null;
+		document.getElementById("currentAreaName").innerHTML = "N/A";
+		document.getElementById("currentAreaType").innerHTML = "N/A";
+		document.getElementById("currentAreaRectangles").innerHTML = 0;
+		document.getElementById("currentAreaCircles").innerHTML = 0;
+	}
+
+	function storedAreaHandler(){
+		var sel = document.getElementById("loadAreaSelect");
+		var selindex = sel.selectedIndex;
+		if (selindex == 0) {
+			return;
+		}
+		var index = sel.options[selindex].value;
+
+		if (_value == "Delete Area") {
+			deleteStoredArea(index);
+		}
+		if (_value == "Load Area") {
+			loadArea(index);
+		};
+	}
+
+	function deleteStoredArea(index){
+		var tempArea = areas[index];
+		//remove from stored areas
+		areas.splice(index, index);
+		//remove from drop down
+		var sel = document.getElementById("loadAreaSelect");
+		var selindex = tempArea.spinnerIndex;
+		sel.remove(tempArea.spinnerIndex);
+
+		switch(tempArea.type){
+			case CAMPUS:
+				document.getElementById("overViewCampus").innerHTML = "No";
+				campusIndex = -1;
+				campusDesignated = false;
+				break;
+			case BUILDING:
+				buildingCount--;
+				document.getElementById("overViewBuildings").innerHTML = buildingCount;
+				break;
+			case AREA:
+				areaCount--;
+				document.getElementById("overViewAreas").innerHTML = areaCount;
+				break;
+		}
+
+		//adjust spinnerindices
+		for (var i = sel.options.length - 1; i >= selindex; i--) {
+			areas[sel.options[i].value].spinnerIndex--;
+		};
+
+		//if deleted area is currently being displayed, clean display
+		if (currentArea.index == index) {
+			discardArea();
+		};
+	}
+
+	function loadArea(index){
+		//discard old
+		discardArea();
+
+		currentArea = areas[index].clone();
+		currentArea.displayShapes();
+		document.getElementById("currentAreaName").innerHTML = currentArea.name;
+		document.getElementById("currentAreaType").innerHTML = fromEnum(currentArea.type);
+		document.getElementById("currentAreaRectangles").innerHTML = currentArea.rectangles;
+		document.getElementById("currentAreaCircles").innerHTML = currentArea.circles;
+
+	}
+
+	function fileHandler(){
+		if (_value == "Reset") {
+			resetFile();
+		}
+		if (_value == "Save XML") {
+			saveXML();
+		}
+		if (_value == "Load XML") {
+			loadXML();
+		};
+	}
+
+	function resetFile(){
+		discardArea();
+
+		areas = [];
+		currentArea = null;
+		currentShape = null;
+
+		campusDesignated = false;
+		campusIndex = -1;
+		areaCount = 0;
+		buildingCount = 0;
+
+		document.getElementById("loadAreaSelect").innerHTML = "<option>-- Select Area --</option>";
+		document.getElementById("overViewCampus").innerHTML = "No";
+		document.getElementById("overViewBuildings").innerHTML = 0;
+		document.getElementById("overViewAreas").innerHTML = 0;
+		document.getElementById("nametext").value = "";
+		var selection = document.querySelector("input[name='areatype']:checked");
+		if (selection != null) {
+			selection.checked = false;
+		};
+
+	}
+
+	function saveXML(){
+		if (!campusDesignated) {
+			return;
+		}
+
+		var areaFile = document.implementation.createDocument("", "DesignatedAreas", null);
+
+
+		for (var i = areas.length - 1; i >= 0; i--) {
+			var tempArea = areas[i];
+
+			var areaNode = areaFile.createElement("DesignatedArea");
+
+			//set name
+			var nameNode = areaFile.createElement("Name");
+			nameNode.innerHTML = tempArea.name
+			areaNode.appendChild(nameNode);
+
+			//set type
+			var typeNode = areaFile.createElement("Type");
+			typeNode.innerHTML = fromEnum(tempArea.type);
+			areaNode.appendChild(typeNode);
+
+
+			//set shapes
+			var shapesNode = areaFile.createElement("Shapes");
+			for (var j = tempArea.shapes.length - 1; j >= 0; j--) {
+				if (tempArea.shapes[j] instanceof google.maps.Circle) {
+					var shapeNode = areaFile.createElement("Circle");
+					var shapeCenterNode = areaFile.createElement("Center");
+					var shapeRadiusNode = areaFile.createElement("Radius");
+					var shapeCenterLatNode = areaFile.createElement("Lat");
+					var shapeCenterLngNode = areaFile.createElement("Lng");
+
+					//set center and radius
+					shapeCenterLatNode.innerHTML = tempArea.shapes[j].center.lat();
+					shapeCenterLngNode.innerHTML = tempArea.shapes[j].center.lng();
+					shapeRadiusNode.innerHTML = tempArea.shapes[j].radius;
+
+					//append xml nodes
+					shapeCenterNode.appendChild(shapeCenterLatNode);
+					shapeCenterNode.appendChild(shapeCenterLngNode);
+					shapeNode.appendChild(shapeCenterNode);
+					shapeNode.appendChild(shapeRadiusNode);
+					shapesNode.appendChild(shapeNode);
+				}
+				else if (tempArea.shapes[j] instanceof google.maps.Rectangle) {
+					var shapeNode = areaFile.createElement("Rectangle");
+					var shapeBoundsNode = areaFile.createElement("Bounds");
+					var shapeNorthNode = areaFile.createElement("North");
+					var shapeEastNode = areaFile.createElement("East");
+					var shapeSouthNode = areaFile.createElement("South");
+					var shapeWestNode = areaFile.createElement("West");
+
+					//set bounds
+					shapeNorthNode.innerHTML = tempArea.shapes[j].getBounds().getNorthEast().lat();
+					shapeEastNode.innerHTML = tempArea.shapes[j].getBounds().getNorthEast().lng();
+					shapeSouthNode.innerHTML = tempArea.shapes[j].getBounds().getSouthWest().lat();
+					shapeWestNode.innerHTML = tempArea.shapes[j].getBounds().getSouthWest().lng();
+
+					//append xml nodes
+					shapeBoundsNode.appendChild(shapeNorthNode);
+					shapeBoundsNode.appendChild(shapeEastNode);
+					shapeBoundsNode.appendChild(shapeSouthNode);
+					shapeBoundsNode.appendChild(shapeWestNode);
+					shapeNode.appendChild(shapeBoundsNode);
+					shapesNode.appendChild(shapeNode);
+				}
+			};
+			areaNode.appendChild(shapesNode);
+			console.log("BEFORE");
+			console.log(areaFile);
+			console.log(areaNode);
+			areaFile.getElementsByTagName("DesignatedAreas")[0].appendChild(areaNode);
+			console.log("AFTER");
+			console.log(areaFile);
+		};
+
+		console.log(areaFile);
+
+		if (xmlFile != null) {
+			window.URL.revokeObjectURL(xmlFile.getElementsByTagName("DesignatedAreas"));
+		};
+
+		var data = new Blob([new XMLSerializer().serializeToString(areaFile)], {type: "text/plain"});
+		var xmlFile = window.URL.createObjectURL(data);
+
+		var download = document.createElement("a");
+		download.href = xmlFile;
+		download.download = "DesignatedAreas.xml";
+		download.click();
+	}
+
+	function loadXML(){
+		return;
+	}
+
+	//get enumerator value from string
+	function toEnum(strval){
+		if (strval === "campus") {return CAMPUS;}
+		if (strval === "area") {return AREA;}
+		if (strval === "building") {return BUILDING;}
+		return -1;
+	}
+
+	function fromEnum(intval){
+		if (intval == CAMPUS) {return "campus";}
+		if (intval == AREA) {return "area";}
+		if (intval == BUILDING) {return "building";}
+	}
+
+	function initMap(){
+		map = new google.maps.Map(document.getElementById("map"), { center: {lat: 47.922267, lng: -97.075764}, zoom: 16});
+	}
+	</script>
+	<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAltZgsby-72AE7Wqaz_APQDJHG7g0ur0s&callback=initMap" async defer></script>
+</body>
+</html>
